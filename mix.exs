@@ -23,8 +23,8 @@ defmodule AuroraUix.MixProject do
   defp deps do
     [
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.4", only: [:dev]},
-      {:doctor, "~> 0.22.0", only: :dev},
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
+      {:doctor, "~> 0.22.0", only: :dev, runtime: false},
       {:ecto_sql, "~> 3.10"},
       {:postgrex, ">= 0.0.0"}
     ]

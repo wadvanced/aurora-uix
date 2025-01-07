@@ -14,13 +14,13 @@ defmodule AuroraUixWeb.Templates.Phoenix do
 
   ```elixir
   iex> AuroraUixWeb.Templates.Base.generate(:list, %{})
-  # => quote do: ~H"<h1>Phoenix Template</h1>list"
+  # => "<h1>Phoenix Template</h1>list"
 
   iex> AuroraUixWeb.Templates.Base.generate(:card, %{})
-  # => quote do: ~H"<h1>Phoenix Template</h1>card"
+  # => "<h1>Phoenix Template</h1>card"
 
   iex> AuroraUixWeb.Templates.Base.generate(:form, %{})
-  # => quote do: ~H"<h1>Phoenix Template</h1>form"
+  # => "<h1>Phoenix Template</h1>form"
   """
 
   @behaviour AuroraUixWeb.Template
@@ -33,49 +33,43 @@ defmodule AuroraUixWeb.Templates.Phoenix do
   - `type` (`atom`): Specifies the type of template to generate.
     Supported values: `:list`, `:card`, `:form`.
 
-  - `opts` (`map`): A map of options (currently unused in this implementation).
+  - `parsed_opts` (`map`): A map of options (currently unused in this implementation).
 
   ## Returns
 
-  - (`Macro.t()`): A quoted HEEx template corresponding to the specified type.
+  - (`binary`): A HEEx template corresponding to the specified type.
 
   ## Examples
 
   ```elixir
   generate(:list, %{})
-  # => quote do: ~H"<h1>Phoenix Template</h1>list"
+  # => "<h1>Phoenix Template</h1>list"
 
   generate(:card, %{})
-  # => quote do: ~H"<h1>Phoenix Template</h1>card"
+  # => "<h1>Phoenix Template</h1>card"
 
   generate(:form, %{})
-  # => quote do: ~H"<h1>Phoenix Template</h1>form"
+  # => "<h1>Phoenix Template</h1>form"
   """
-  @spec generate(atom, Keyword.t()) :: Macro.t()
-  def generate(:list, _opts) do
-    quote do
-      ~H"""
+  @spec generate(atom, map) :: Macro.t()
+  def generate(:list, _parsed_opts) do
+    ~S"""
       <h1>Phoenix Template</h1>
       list
-      """
-    end
+    """
   end
 
-  def generate(:card, _opts) do
-    quote do
-      ~H"""
+  def generate(:card, _parsed_opts) do
+    ~S"""
       <h1>Phoenix Template</h1>
       card
-      """
-    end
+    """
   end
 
-  def generate(:form, _opts) do
-    quote do
-      ~H"""
+  def generate(:form, _parsed_opts) do
+    ~S"""
       <h1>Phoenix Template</h1>
       form
-      """
-    end
+    """
   end
 end
