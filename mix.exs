@@ -8,7 +8,10 @@ defmodule AuroraUix.MixProject do
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      dialyzer: [
+        plt_add_apps: [:eex]
+      ]
     ]
   end
 
@@ -24,9 +27,7 @@ defmodule AuroraUix.MixProject do
     [
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
-      {:doctor, "~> 0.22.0", only: :dev, runtime: false},
-      {:ecto_sql, "~> 3.10"},
-      {:postgrex, ">= 0.0.0"}
+      {:doctor, "~> 0.22.0", only: :dev, runtime: false}
     ]
   end
 

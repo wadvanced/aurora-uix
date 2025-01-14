@@ -1,9 +1,11 @@
-defmodule AuroraUixWeb.Parsers.Common do
+defmodule AuroraUix.Parsers.Common do
   @moduledoc """
   Parse common options and adds the module related values.
   """
 
-  use AuroraUixWeb.Parsers.BaseParser
+  use AuroraUix.Parsers.BaseParser
+
+  alias AuroraUix.Field
 
   @doc """
   Parse module and common options.
@@ -59,6 +61,7 @@ defmodule AuroraUixWeb.Parsers.Common do
     |> add_opt(module, opts, :name)
     |> add_opt(module, opts, :source)
     |> add_opt(module, opts, :title)
+    |> add_opt(module, opts, :fields)
   end
 
   @doc """
@@ -84,4 +87,78 @@ defmodule AuroraUixWeb.Parsers.Common do
     |> module.__schema__()
     |> capitalize()
   end
+
+  def default_value(module, :fields) do
+    :fields
+    |> module.__schema__()
+    |> Enum.reject(&(&1 in [:id, :inserted_at, :updated_at]))
+    |> Enum.map(&field(module, &1))
+  end
+
+  ## PRIVATE
+
+  @spec field(module, atom | binary) :: Field.t()
+  defp field(module, field) do
+    type = module.__schema__(:type, field)
+
+    attrs = %{
+      field: field,
+      label: field_label(field),
+      placeholder: field_placeholder(field, type),
+      html_type: field_html_type(type),
+      length: field_length(type),
+      precision: field_precision(type),
+      scale: field_scale(type)
+    }
+
+    Field.new(attrs)
+  end
+
+  @spec field_label(binary) :: binary
+  defp field_label(nil), do: ""
+  defp field_label(name), do: name |> to_string() |> String.capitalize()
+
+  @spec field_placeholder(binary, atom) :: binary
+  defp field_placeholder(_, type) when type in [:id, :integer, :float, :decimal], do: "0"
+
+  defp field_placeholder(_, type)
+       when type in [:naive_datetime, :naive_datetime_usec, :utc_datetime, :utc_datetime_usec],
+       do: "yyyy/MM/dd HH:mm:ss"
+
+  defp field_placeholder(_, type) when type in [:time, :time_usec], do: "HH:mm:ss"
+  defp field_placeholder(name, _type), do: name |> to_string() |> String.capitalize()
+
+  @spec field_html_type(atom) :: atom
+  defp field_html_type(type) when type in [:string, :binary_id, :binary, :bitstring, Ecto.UUID],
+    do: :text
+
+  defp field_html_type(type) when type in [:id, :integer, :float, :decimal], do: :number
+
+  defp field_html_type(type)
+       when type in [:naive_datetime, :naive_datetime_usec, :utc_datetime, :utc_datetime_usec],
+       do: :datetime_local
+
+  defp field_html_type(type) when type in [:time, :time_usec], do: :time
+  defp field_html_type(type), do: type
+
+  @spec field_length(atom) :: integer
+  defp field_length(type) when type in [:string, :binary_id, :binary, :bitstring], do: 255
+  defp field_length(type) when type in [:id, :integer], do: 10
+  defp field_length(type) when type in [:float, :decimal], do: 12
+
+  defp field_length(type)
+       when type in [:naive_datetime, :naive_datetime_usec, :utc_datetime, :utc_datetime_usec],
+       do: 20
+
+  defp field_length(type) when type in [:time, :time_usec], do: 10
+  defp field_length(Ecto.UUID), do: 34
+  defp field_length(_type), do: 50
+
+  @spec field_precision(atom) :: integer
+  defp field_precision(type) when type in [:id, :integer, :float, :decimal], do: 10
+  defp field_precision(_type), do: 0
+
+  @spec field_precision(atom) :: integer
+  defp field_scale(type) when type in [:float, :decimal], do: 2
+  defp field_scale(_type), do: 0
 end

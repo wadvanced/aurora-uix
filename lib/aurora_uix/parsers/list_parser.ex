@@ -1,9 +1,9 @@
-defmodule AuroraUixWeb.Parsers.ListParser do
+defmodule AuroraUix.Parsers.ListParser do
   @moduledoc """
   Parse common options and adds the module related values.
   """
 
-  use AuroraUixWeb.Parsers.BaseParser
+  use AuroraUix.Parsers.BaseParser
 
   @doc """
   Parse module and :list options.

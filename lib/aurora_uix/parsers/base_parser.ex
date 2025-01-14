@@ -1,11 +1,11 @@
-defmodule AuroraUixWeb.Parsers.BaseParser do
+defmodule AuroraUix.Parsers.BaseParser do
   @moduledoc """
   Enables parser behaviour
   """
 
   defmacro __using__(_opts) do
     quote do
-      @behaviour AuroraUixWeb.Parser
+      @behaviour AuroraUix.Parser
 
       @spec add_opt(map, module, Keyword.t(), atom) :: map
       defp add_opt(parsed_opts, module, opts, key) do

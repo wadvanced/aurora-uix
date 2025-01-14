@@ -3,7 +3,7 @@ defmodule AuroraUixWeb.Uix do
   Main module for generating user interfaces.
   """
 
-  alias AuroraUixWeb.Parser
+  alias AuroraUix.Parser
   alias AuroraUixWeb.Template
 
   require Logger
@@ -30,17 +30,16 @@ defmodule AuroraUixWeb.Uix do
       There is also the AuroraUixWeb.PhoenixTemplate, which resembles the phoenix ui.
       The template can also be configured, application wide, by adding :aurora_uix, template: Module.
       New templates can be authored.
+    * `field: (AuroraUix.Field)`: Field to be added to the default list or updated.
     * `fields: []`: Fields to be used, overrides the default list.
       The default list is created with all the fields found in the module, excluding
       the redacted fields.
-    * `add: []`: List of fields to be added to the default list, duplicated fields are ignored.
-      A proper warning message will be issued.
+    * `actions: [{:top | :bottom, function}]` : Overrides the default list of actions that are displayed at the top or bottom.
+    * `add_actions: [{:top | :bottom, function}]`: Adds actions to the current list.
     * `remove: []`: List of fields to be remove from the list.
       trying to remove non-existing fields will log a warning, but no error will be raised.
     * `title: string | :hide`: Title for the view, a :hide value will make it to be ignored.
     * `sub_title: string | :hide`: Subtitle for the view, a :hide value will disallow its generation.
-    * `actions: [{:top | :bottom, function}]` : Overrides the default list of actions that are displayed at the top or bottom.
-    * `add_actions: [{:top | :bottom, function}]`: Adds actions to the current list.
     * `remove_actions: [function]`: Removes actions from the current list.
 
     ### :list and card opts
@@ -54,6 +53,8 @@ defmodule AuroraUixWeb.Uix do
   defmacro define(module, type, opts \\ [])
 
   defmacro define(module, type, opts) when type in @uix_valid_types do
+    {opts, _} = Code.eval_quoted(opts)
+
     parsed_opts =
       module
       |> validate_module()
@@ -102,6 +103,8 @@ defmodule AuroraUixWeb.Uix do
       alias AuroraUixWeb.Uix
     end
   end
+
+  ## PRIVATE
 
   @spec validate_module(Macro.t()) :: module
   defp validate_module({_, _, module_definition}) do

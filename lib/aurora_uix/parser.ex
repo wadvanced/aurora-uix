@@ -1,10 +1,10 @@
-defmodule AuroraUixWeb.Parser do
+defmodule AuroraUix.Parser do
   @moduledoc """
   Processes the options and produces a map for further rendering.
   """
 
-  alias AuroraUixWeb.Parsers.Common
-  alias AuroraUixWeb.Parsers.ListParser
+  alias AuroraUix.Parsers.Common
+  alias AuroraUix.Parsers.ListParser
 
   @callback default_value(module :: module, key :: atom) :: any
 
