@@ -2,7 +2,7 @@ defmodule AuroraUixWeb.Templates.Base do
   @moduledoc """
   A module for generating basic HEEx templates for different UI component types.
 
-  This module provides a single function, `generate/2`,
+  This module provides a single function, `generate_view/2`,
   which creates HEEx template fragments based on the specified type.
   Currently, it supports the following types:
 
@@ -13,13 +13,13 @@ defmodule AuroraUixWeb.Templates.Base do
   ## Examples
 
   ```elixir
-  iex> AuroraUixWeb.Templates.Base.generate(:list, %{})
+  iex> AuroraUixWeb.Templates.Base.generate_view(:list, %{})
   # => "<h1>Base Template</h1>list"
 
-  iex> AuroraUixWeb.Templates.Base.generate(:card, %{})
+  iex> AuroraUixWeb.Templates.Base.generate_view(:card, %{})
   # => "<h1>Base Template</h1>card"
 
-  iex> AuroraUixWeb.Templates.Base.generate(:form, %{})
+  iex> AuroraUixWeb.Templates.Base.generate_view(:form, %{})
   # => "<h1>Base Template</h1>form"
   """
 
@@ -53,8 +53,8 @@ defmodule AuroraUixWeb.Templates.Base do
   generate(:form, %{})
   # => "<h1>Base Template</h1>form"
   """
-  @spec generate(atom, map) :: binary
-  def generate(:list, parsed_opts) do
+  @spec generate_view(atom, map) :: binary
+  def generate_view(:list, parsed_opts) do
     parsed_opts =
       parsed_opts
       |> columns()
@@ -108,14 +108,14 @@ defmodule AuroraUixWeb.Templates.Base do
     )
   end
 
-  def generate(:card, _parsed_opts) do
+  def generate_view(:card, _parsed_opts) do
     ~S"""
       <h1>Base Template</h1>
     card
     """
   end
 
-  def generate(:form, _parsed_opts) do
+  def generate_view(:form, _parsed_opts) do
     ~S"""
       <h1>Base Template</h1>
     form

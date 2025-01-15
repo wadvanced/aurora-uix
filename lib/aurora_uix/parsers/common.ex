@@ -58,6 +58,7 @@ defmodule AuroraUix.Parsers.Common do
   @spec parse(map, module, atom, Keyword.t()) :: map
   def parse(parsed_opts, module, _type, opts) do
     parsed_opts
+    |> add_opt(module, opts, :module)
     |> add_opt(module, opts, :name)
     |> add_opt(module, opts, :source)
     |> add_opt(module, opts, :title)
@@ -73,6 +74,14 @@ defmodule AuroraUix.Parsers.Common do
 
   """
   @spec default_value(module, atom) :: any
+
+  def default_value(module, :module) do
+    module
+    |> Module.split()
+    |> List.last()
+    |> String.downcase()
+  end
+
   def default_value(module, :name) do
     module
     |> Module.split()

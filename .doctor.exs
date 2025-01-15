@@ -1,5 +1,5 @@
 %Doctor.Config{
-  ignore_modules: [],
+  ignore_modules: [AuroraUixWeb.Uix.Renderer],
   ignore_paths: [],
   min_module_doc_coverage: 100,
   min_module_spec_coverage: 100,

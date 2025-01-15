@@ -3,6 +3,9 @@ defmodule AuroraUixWeb.Template do
   Templates are expected to implement this behaviour.
   """
 
+  @uix_template :aurora_uix
+                |> Application.compile_env(:template, AuroraUixWeb.Templates.Base)
+
   @doc """
   Generates a HEEx code fragment for the specified type and options.
 
@@ -20,70 +23,19 @@ defmodule AuroraUixWeb.Template do
   ## Examples
 
   ```elixir
-  generate(:list, %{fields: [:name, :email})
+  generate_view(:list, %{fields: [:name, :email})
   # => quote do: ~H"<ul><li><%= @name %></li><li><%= @email %></li></ul>"
 
-  generate(:card, %{title: "User Info", content: ~H"<p><%= @user %></p>"})
+  generate_view(:card, %{title: "User Info", content: ~H"<p><%= @user %></p>"})
   # => quote do: ~H"<div class=\"card\"><h1>User Info</h1><p><%= @user %></p></div>"
 
   """
-  @callback generate(type :: atom, parsed_opts :: map) :: binary
+  @callback generate_view(type :: atom, parsed_opts :: map) :: binary
 
   @doc """
-  Validates that the given module implements the current behaviour (`#{__MODULE__}`).
-
-  This function checks two things:
-  1. The module has declared the `#{__MODULE__}` behaviour via the `@behaviour` attribute.
-  2. The module exports the required functions.
-
-  If either of these conditions is not met, it raises an `ArgumentError`.
-
-  ## Parameters
-
-    - `module` (`module`): The module to validate.
-
-  ## Returns
-
-    - (`module`): The same module, if it is valid.
-
-  ## Raises
-
-    - `ArgumentError`: If the module does not implement the required behaviour or does not define the `generate/2` function.
-
-  ## Examples
-
-    ```elixir
-    defmodule ValidModule do
-      @behaviour AuroraUixWeb.Template
-      def generate(:example, _parsed_opts), do: :ok
-    end
-
-    defmodule InvalidModule do
-      def generate(:example, _parsed_opts), do: :ok
-    end
-
-    AuroraUixWeb.Template.validate(ValidModule)
-    # => ValidModule
-
-    AuroraUixWeb.Template.validate(InvalidModule)
-    # => ** (ArgumentError) The InvalidModule does not implement the `AuroraUixWeb.Template` behaviour.
+  Validates and return the configured uix template.
   """
-  @spec validate(module) :: module
-  def validate(module) do
-    valid? =
-      module
-      |> behaviour_implemented?()
-      |> Kernel.and(function_exported?(module, :generate, 2))
-
-    if !valid?,
-      do:
-        raise(
-          ArgumentError,
-          "The #{module} does not implement the `#{__MODULE__}` behaviour."
-        )
-
-    module
-  end
+  def uix_template(), do: validate(@uix_template)
 
   @doc """
   Interpolates [[key]] with the string value. Ensures that the returned template has the least amount of
@@ -99,6 +51,23 @@ defmodule AuroraUixWeb.Template do
   end
 
   ## PRIVATE FUNCTIONS
+
+  @spec validate(module) :: module
+  defp validate(module) do
+    valid? =
+      module
+      |> behaviour_implemented?()
+      |> Kernel.and(function_exported?(module, :generate_view, 2))
+
+    if !valid?,
+       do:
+         raise(
+           ArgumentError,
+           "The #{module} does not implement the `#{__MODULE__}` behaviour."
+         )
+
+    module
+  end
 
   @spec behaviour_implemented?(module) :: boolean
   defp behaviour_implemented?(module) do
