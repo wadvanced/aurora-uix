@@ -8,7 +8,7 @@ defmodule AuroraUixWeb.Uix.Renderer do
 
   require Logger
 
-  @uix_valid_types [:list, :card, :form]
+  @uix_valid_types [:index, :card, :form]
 
   @doc """
   Defines the generation options for creating a full fledge view.
@@ -108,26 +108,30 @@ defmodule AuroraUixWeb.Uix.Renderer do
   ### Example Usage
 
   ```elixir
-  defmodule MyAppWeb.UserLive.Index do
-    use MyAppWeb, :live_view
+  defmodule MyAppWeb.UserLive.Views do
     use AuroraUixWeb.Uix
 
-    view MyApp.Accounts, MyApp.Accounts.User, :list, [source: "users", name: "User", title: "Users"]
+    module MyAppWeb, MyApp.Accounts, MyApp.Accounts.User, :list, [source: "users", name: "User", title: "Users"]
   end
   """
-  defmacro view(web, context, module, types, opts) do
+  defmacro module(web, context, module, types, opts \\ []) do
     web = Macro.expand(web, __CALLER__)
     context = Macro.expand(context, __CALLER__)
     module = Macro.expand(module, __CALLER__)
+    caller = __CALLER__.module
+
+    modules = %{web: web, context: context, module: module, caller: caller}
+
     types = if is_list(types), do: types, else: [types]
 
-    Code.ensure_compiled(context)
-    Code.ensure_compiled(module)
+    modules
+    |> Map.values()
+    |> Enum.each(&Code.ensure_compiled/1)
 
     generated_code =
       for type <- types do
         parsed_opts = parse_opts(module, type, opts)
-        Template.uix_template().generate_module(web, context, module, type, opts, parsed_opts)
+        Template.uix_template().generate_module(modules, type, opts, parsed_opts)
       end
 
     quote do

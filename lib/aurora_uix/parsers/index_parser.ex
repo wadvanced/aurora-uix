@@ -1,4 +1,4 @@
-defmodule AuroraUix.Parsers.ListParser do
+defmodule AuroraUix.Parsers.IndexParser do
   @moduledoc """
   Parse common options and adds the module related values.
   """
@@ -6,12 +6,12 @@ defmodule AuroraUix.Parsers.ListParser do
   use AuroraUix.Parsers.BaseParser
 
   @doc """
-  Parse module and :list options.
+  Parse module and :index options.
 
   ## PARAMETERS
   * `module` (module): Schema module to be used for gathering field information.
   * `type` (atom): Type of view to generate.
-    * `:list` : Table like view with selectable fields and action buttons.
+    * `:index` : Represents the index module.
     * `:card` : Card like view with configurable card fields.
     * `:form` : Form like view, can have nested elements displayed as block or sections.
   * `opts` (Keyword.t()): List of options, the available ones depends on the type of view.
@@ -30,7 +30,7 @@ defmodule AuroraUix.Parsers.ListParser do
 
   """
   @spec parse(map, module, atom, Keyword.t()) :: map
-  def parse(parsed_opts, module, :list, opts) do
+  def parse(parsed_opts, module, :index, opts) do
     add_opt(parsed_opts, module, opts, :rows)
   end
 

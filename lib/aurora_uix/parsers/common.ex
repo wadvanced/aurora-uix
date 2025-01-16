@@ -79,7 +79,7 @@ defmodule AuroraUix.Parsers.Common do
     module
     |> Module.split()
     |> List.last()
-    |> String.downcase()
+    |> Macro.underscore()
   end
 
   def default_value(module, :name) do
@@ -125,7 +125,7 @@ defmodule AuroraUix.Parsers.Common do
 
   @spec field_label(binary) :: binary
   defp field_label(nil), do: ""
-  defp field_label(name), do: name |> to_string() |> String.capitalize()
+  defp field_label(name), do: name |> to_string() |> String.capitalize() |> String.replace("_", " ")
 
   @spec field_placeholder(binary, atom) :: binary
   defp field_placeholder(_, type) when type in [:id, :integer, :float, :decimal], do: "0"

@@ -6,7 +6,7 @@ defmodule AuroraUixWeb.Templates.Base do
   which creates HEEx template fragments based on the specified type.
   Currently, it supports the following types:
 
-  - `:list`: Generates a template for a list.
+  - `:live_view`: Generates a template for a list.
   - `:card`: Generates a template for a card.
   - `:form`: Generates a template for a form.
 
@@ -54,7 +54,7 @@ defmodule AuroraUixWeb.Templates.Base do
   # => "<h1>Base Template</h1>form"
   """
   @spec generate_view(atom, map) :: binary
-  def generate_view(:list, parsed_opts) do
+  def generate_view(:index, parsed_opts) do
     parsed_opts =
       parsed_opts
       |> columns()
@@ -78,15 +78,15 @@ defmodule AuroraUixWeb.Templates.Base do
             row_click={fn {_id, row} -> JS.navigate(~p"/[[source]]/#{row}") end}
         >
           [[columns]]
-          <:action :let={{_id, entity}}>
+          <:action :let={{_id, [[module]]}}>
             <div class="sr-only">
-              <.link navigate={~p"/[[source]]/#{entity}"}>Show</.link>
+              <.link navigate={~p"/[[source]]/#{[[module]]}"}>Show</.link>
             </div>
-            <.link patch={~p"/[[source]]/#{entity}/edit"}>Edit</.link>
+            <.link patch={~p"/[[source]]/#{[[module]]}/edit"}>Edit</.link>
           </:action>
-          <:action :let={{id, entity}}>
+          <:action :let={{id, [[module]]}}>
             <.link
-              phx-click={JS.push("delete", value: %{id: entity.id}) |> hide("##{id}")}
+              phx-click={JS.push("delete", value: %{id: [[module]].id}) |> hide("##{id}")}
               data-confirm="Are you sure?"
             >
               Delete
@@ -94,16 +94,48 @@ defmodule AuroraUixWeb.Templates.Base do
           </:action>
         </.table>
 
-        <.modal :if={@live_action in [:new, :edit]} id="account-modal" show on_cancel={JS.patch(~p"/[[source]]")}>
+        <.modal :if={@live_action in [:new, :edit]} id="[[module]]-modal" show on_cancel={JS.patch(~p"/[[source]]")}>
           <.live_component
-            module={AuroraUixDemoWeb.AccountLive.FormComponent}
-            id={@account.id || :new}
+            module={[[name]]FormComponent}
+            id={@[[module]].id || :new}
             title={@page_title}
             action={@live_action}
-            account={@account}
+            [[module]]={@[[module]]}
             patch={~p"/[[source]]"}
           />
         </.modal>
+      """
+    )
+  end
+
+  def generate_view(:form, parsed_opts) do
+    parsed_opts =
+      parsed_opts
+      |> form_fields()
+      |> then(&Map.put(parsed_opts, :form_fields, &1))
+
+    Template.interpolate(
+      parsed_opts,
+      ~S"""
+        <div>
+          <.header>
+            {@title}
+            <:subtitle>Use this form to manage [[module]] records in your database.</:subtitle>
+          </.header>
+
+          <.simple_form
+            for={@form}
+            id="[[module]]-form"
+            phx-target={@myself}
+            phx-change="validate"
+            phx-submit="save"
+          >
+            [[form_fields]]
+            <:actions>
+              <.button phx-disable-with="Saving...">Save [[name]]</.button>
+            </:actions>
+          </.simple_form>
+        </div>
       """
     )
   end
@@ -112,13 +144,6 @@ defmodule AuroraUixWeb.Templates.Base do
     ~S"""
       <h1>Base Template</h1>
     card
-    """
-  end
-
-  def generate_view(:form, _parsed_opts) do
-    ~S"""
-      <h1>Base Template</h1>
-    form
     """
   end
 
@@ -158,29 +183,39 @@ defmodule AuroraUixWeb.Templates.Base do
   - The generated module provides standard LiveView functionality, including dynamic assignment
   of page titles and CRUD operations for the specified schema or context module.
   """
-  @spec generate_module(module, module, module, atom, Keyword.t(), map) :: Macro.t()
-  def generate_module(web, context, module, :list = type, opts, parsed_opts) do
-    key = String.to_existing_atom(parsed_opts.source)
+  @spec generate_module(map, atom, Keyword.t(), map) :: Macro.t()
+  def generate_module(modules, :index = type, opts, parsed_opts) do
+    list_key = String.to_existing_atom(parsed_opts.source)
+    entity_key = String.to_atom(parsed_opts.module)
     list_function = String.to_existing_atom("list_#{parsed_opts.source}")
     get_function = String.to_existing_atom("get_#{parsed_opts.module}!")
     delete_function = String.to_existing_atom("delete_#{parsed_opts.module}")
+    form_component = form_component(modules, parsed_opts)
 
     quote do
-      defmodule List do
-        use unquote(web), :live_view
+      defmodule Index do
+        @moduledoc false
 
-        alias unquote(context)
-        alias unquote(module)
+        use unquote(modules.web), :live_view
+
+        alias unquote(modules.context)
+        alias unquote(modules.module)
+        alias unquote(form_component)
 
         @impl true
         def render(assigns) do
           var!(assigns) = Map.merge(%{}, assigns)
-          define(unquote(module), unquote(type), unquote(opts))
+          define(unquote(modules.module), unquote(type), unquote(opts))
         end
 
         @impl true
         def mount(_params, _session, socket) do
-          {:ok, stream(socket, unquote(key), apply(unquote(context), unquote(list_function), []))}
+          {:ok,
+           stream(
+             socket,
+             unquote(list_key),
+             apply(unquote(modules.context), unquote(list_function), [])
+           )}
         end
 
         @impl true
@@ -190,16 +225,16 @@ defmodule AuroraUixWeb.Templates.Base do
 
         @impl true
         def handle_event("delete", %{"id" => id}, socket) do
-          instance = apply(unquote(context), unquote(get_function), [id])
+          instance = apply(unquote(modules.context), unquote(get_function), [id])
 
-          {:ok, _} = apply(unquote(module), unquote(delete_function), [instance])
+          {:ok, _} = apply(unquote(modules.module), unquote(delete_function), [instance])
 
-          {:noreply, stream_delete(socket, unquote(key), instance)}
+          {:noreply, stream_delete(socket, unquote(list_key), instance)}
         end
 
         @impl true
-        def handle_info({_component, {:saved, account}}, socket) do
-          {:noreply, stream_insert(socket, :accounts, account)}
+        def handle_info({_component, {:saved, entity}}, socket) do
+          {:noreply, stream_insert(socket, unquote(list_key), entity)}
         end
 
         ## PRIVATE
@@ -208,25 +243,114 @@ defmodule AuroraUixWeb.Templates.Base do
         defp apply_action(socket, :edit, %{"id" => id}) do
           socket
           |> assign(:page_title, "Edit #{unquote(parsed_opts.name)}")
-          |> assign(:account, apply(unquote(context), unquote(get_function), [id]))
+          |> assign(
+            unquote(entity_key),
+            apply(unquote(modules.context), unquote(get_function), [id])
+          )
         end
 
         defp apply_action(socket, :new, _params) do
           socket
           |> assign(:page_title, "New #{unquote(parsed_opts.name)}")
-          |> assign(:account, %unquote(module){})
+          |> assign(unquote(entity_key), %unquote(modules.module){})
         end
 
         defp apply_action(socket, :index, _params) do
           socket
           |> assign(:page_title, "Listing #{unquote(parsed_opts.title)}")
-          |> assign(:account, nil)
+          |> assign(unquote(entity_key), nil)
         end
       end
     end
   end
 
-  def generate_module(_web, _context, _module, _type, _opts, _parsed_opts) do
+  def generate_module(modules, :form = type, opts, parsed_opts) do
+    entity_key = String.to_atom(parsed_opts.module)
+    change_function = String.to_existing_atom("change_#{parsed_opts.module}")
+    update_function = String.to_existing_atom("update_#{parsed_opts.module}")
+    create_function = String.to_existing_atom("create_#{parsed_opts.module}")
+    form_component = form_component(modules, parsed_opts)
+
+    quote do
+      defmodule unquote(form_component) do
+        @moduledoc false
+
+        use unquote(modules.web), :live_component
+        alias unquote(modules.context)
+
+        @impl true
+        def render(assigns) do
+          var!(assigns) = Map.merge(%{}, assigns)
+          define(unquote(modules.module), unquote(type), unquote(opts))
+        end
+
+        @impl true
+        def update(%{unquote(entity_key) => entity} = assigns, socket) do
+          form =
+            unquote(modules.context)
+            |> apply(unquote(change_function), [entity])
+            |> to_form()
+
+          {:ok,
+           socket
+           |> assign(assigns)
+           |> assign_new(:form, fn -> form end)}
+        end
+
+        @impl true
+        def handle_event("validate", %{unquote(parsed_opts.module) => entity_params}, socket) do
+          changeset =
+            apply(unquote(modules.context), unquote(change_function), [
+              socket.assigns[unquote(entity_key)],
+              entity_params
+            ])
+
+          {:noreply, assign(socket, form: to_form(changeset, action: :validate))}
+        end
+
+        def handle_event("save", %{unquote(parsed_opts.module) => entity_params}, socket) do
+          save_entity(socket, socket.assigns.action, entity_params)
+        end
+
+        defp save_entity(socket, :edit, entity_params) do
+          case apply(unquote(modules.context), unquote(update_function), [
+                 socket.assigns[unquote(entity_key)],
+                 entity_params
+               ]) do
+            {:ok, entity} ->
+              notify_parent({:saved, entity})
+
+              {:noreply,
+               socket
+               |> put_flash(:info, "#{unquote(parsed_opts.name)} updated successfully")
+               |> push_patch(to: socket.assigns.patch)}
+
+            {:error, %Ecto.Changeset{} = changeset} ->
+              {:noreply, assign(socket, form: to_form(changeset))}
+          end
+        end
+
+        defp save_entity(socket, :new, entity_params) do
+          case apply(unquote(modules.context), unquote(create_function), [entity_params]) do
+            {:ok, entity} ->
+              notify_parent({:saved, entity})
+
+              {:noreply,
+               socket
+               |> put_flash(:info, "#{unquote(parsed_opts.name)} created successfully")
+               |> push_patch(to: socket.assigns.patch)}
+
+            {:error, %Ecto.Changeset{} = changeset} ->
+              {:noreply, assign(socket, form: to_form(changeset))}
+          end
+        end
+
+        defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
+      end
+    end
+  end
+
+  def generate_module(_modules, _type, _opts, _parsed_opts) do
     quote do
       # no generation
     end
@@ -236,10 +360,23 @@ defmodule AuroraUixWeb.Templates.Base do
 
   @spec columns(map) :: binary
   defp columns(%{fields: fields}) do
+    # <:col :let={{_id, account}} label="Number">{account.number}</:col>
     Enum.map_join(fields, "\n", fn field ->
       "<:col :let={{_id, entity}} label=\"#{field.label}\">{entity.#{field.name}}</:col>"
     end)
   end
 
   defp columns(_parsed_opts), do: ""
+
+  @spec form_fields(map) :: binary
+  defp form_fields(%{fields: fields}) do
+    # <.input field={@form[:number]} type="text" label="Number" />
+    Enum.map_join(fields, "\n", fn field ->
+      "<.input field={@form[:#{field.field}]} type=\"#{field.html_type}\" label=\"#{field.label}}\"/>"
+    end)
+  end
+
+  defp form_component(modules, parsed_opts) do
+    Module.concat(modules.caller, "#{parsed_opts.name}FormComponent")
+  end
 end
