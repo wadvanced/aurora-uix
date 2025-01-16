@@ -126,6 +126,12 @@ defmodule AuroraUixWeb.Templates.Base do
   Generates a LiveView module definition for the specified `type`, including functions for rendering,
     mounting, and handling events and parameters.
 
+  Basically creates the necessary functions for:
+  - Initialize the socket with a streamed list of entities.
+  - Handling the navigation actions.
+  - Manage editing, creating, and listing views.
+  - Handling deletion of entities.
+
   ## Parameters
 
     - `context` (`module`): The module that provides the data access functions, such as `list_`, `get_`, and `delete_`.
@@ -139,73 +145,88 @@ defmodule AuroraUixWeb.Templates.Base do
 
       - (`Macro.t()`): A quoted expression representing the generated module definition.
 
+  ## Generated Behavior
+
+  The function expects the provided context and module to define the following functions:
+
+  - `list_<source>()` - Returns a list of all entities for streaming.
+  - `get_<schema_module>!(id)` - Fetches a specific entity by its ID.
+  - `delete_<schema_module>(instance)` - Deletes a specific entity.
+
   ## Notes
 
   - The generated module provides standard LiveView functionality, including dynamic assignment
   of page titles and CRUD operations for the specified schema or context module.
   """
-  @spec generate_module(module, module, atom, Keyword.t(), map) :: Macro.t()
-  def generate_module(context, module, :list = type, opts, parsed_opts) do
+  @spec generate_module(module, module, module, atom, Keyword.t(), map) :: Macro.t()
+  def generate_module(web, context, module, :list = type, opts, parsed_opts) do
     key = String.to_existing_atom(parsed_opts.source)
     list_function = String.to_existing_atom("list_#{parsed_opts.source}")
     get_function = String.to_existing_atom("get_#{parsed_opts.module}!")
     delete_function = String.to_existing_atom("delete_#{parsed_opts.module}")
 
     quote do
-      @impl true
-      def render(assigns) do
-        var!(assigns) = Map.merge(%{}, assigns)
-        define(unquote(module), unquote(type), unquote(opts))
-      end
+      defmodule List do
+        use unquote(web), :live_view
 
-      @impl true
-      def mount(_params, _session, socket) do
-        {:ok, stream(socket, unquote(key), apply(unquote(context), unquote(list_function), []))}
-      end
+        alias unquote(context)
+        alias unquote(module)
 
-      @impl true
-      def handle_params(params, _url, socket) do
-        {:noreply, apply_action(socket, socket.assigns.live_action, params)}
-      end
+        @impl true
+        def render(assigns) do
+          var!(assigns) = Map.merge(%{}, assigns)
+          define(unquote(module), unquote(type), unquote(opts))
+        end
 
-      @impl true
-      def handle_event("delete", %{"id" => id}, socket) do
-        instance = apply(unquote(context), unquote(get_function), [id])
+        @impl true
+        def mount(_params, _session, socket) do
+          {:ok, stream(socket, unquote(key), apply(unquote(context), unquote(list_function), []))}
+        end
 
-        {:ok, _} = apply(unquote(module), unquote(delete_function), [instance])
+        @impl true
+        def handle_params(params, _url, socket) do
+          {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+        end
 
-        {:noreply, stream_delete(socket, unquote(key), instance)}
-      end
+        @impl true
+        def handle_event("delete", %{"id" => id}, socket) do
+          instance = apply(unquote(context), unquote(get_function), [id])
 
-      @impl true
-      def handle_info({_component, {:saved, account}}, socket) do
-        {:noreply, stream_insert(socket, :accounts, account)}
-      end
+          {:ok, _} = apply(unquote(module), unquote(delete_function), [instance])
 
-      ## PRIVATE
+          {:noreply, stream_delete(socket, unquote(key), instance)}
+        end
 
-      @spec apply_action(Phoenix.LiveView.Socket.t(), atom, map) :: Phoenix.LiveView.t()
-      defp apply_action(socket, :edit, %{"id" => id}) do
-        socket
-        |> assign(:page_title, "Edit #{unquote(parsed_opts.name)}")
-        |> assign(:account, apply(unquote(context), unquote(get_function), [id]))
-      end
+        @impl true
+        def handle_info({_component, {:saved, account}}, socket) do
+          {:noreply, stream_insert(socket, :accounts, account)}
+        end
 
-      defp apply_action(socket, :new, _params) do
-        socket
-        |> assign(:page_title, "New #{unquote(parsed_opts.name)}")
-        |> assign(:account, %unquote(module){})
-      end
+        ## PRIVATE
 
-      defp apply_action(socket, :index, _params) do
-        socket
-        |> assign(:page_title, "Listing #{unquote(parsed_opts.title)}")
-        |> assign(:account, nil)
+        @spec apply_action(Phoenix.LiveView.Socket.t(), atom, map) :: Phoenix.LiveView.t()
+        defp apply_action(socket, :edit, %{"id" => id}) do
+          socket
+          |> assign(:page_title, "Edit #{unquote(parsed_opts.name)}")
+          |> assign(:account, apply(unquote(context), unquote(get_function), [id]))
+        end
+
+        defp apply_action(socket, :new, _params) do
+          socket
+          |> assign(:page_title, "New #{unquote(parsed_opts.name)}")
+          |> assign(:account, %unquote(module){})
+        end
+
+        defp apply_action(socket, :index, _params) do
+          socket
+          |> assign(:page_title, "Listing #{unquote(parsed_opts.title)}")
+          |> assign(:account, nil)
+        end
       end
     end
   end
 
-  def generate_module(_context, _module, _type, _opts, _parsed_opts) do
+  def generate_module(_web, _context, _module, _type, _opts, _parsed_opts) do
     quote do
       # no generation
     end
