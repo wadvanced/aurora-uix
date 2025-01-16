@@ -3,8 +3,7 @@ defmodule AuroraUixWeb.Template do
   Templates are expected to implement this behaviour.
   """
 
-  @uix_template :aurora_uix
-                |> Application.compile_env(:template, AuroraUixWeb.Templates.Base)
+  @uix_template Application.compile_env(:aurora_uix, :template, AuroraUixWeb.Templates.Base)
 
   @doc """
   Generates a HEEx code fragment for the specified type and options.
@@ -35,7 +34,8 @@ defmodule AuroraUixWeb.Template do
   @doc """
   Validates and return the configured uix template.
   """
-  def uix_template(), do: validate(@uix_template)
+  @spec uix_template() :: module
+  def uix_template, do: validate(@uix_template)
 
   @doc """
   Interpolates [[key]] with the string value. Ensures that the returned template has the least amount of
@@ -60,11 +60,11 @@ defmodule AuroraUixWeb.Template do
       |> Kernel.and(function_exported?(module, :generate_view, 2))
 
     if !valid?,
-       do:
-         raise(
-           ArgumentError,
-           "The #{module} does not implement the `#{__MODULE__}` behaviour."
-         )
+      do:
+        raise(
+          ArgumentError,
+          "The #{module} does not implement the `#{__MODULE__}` behaviour."
+        )
 
     module
   end

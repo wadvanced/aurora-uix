@@ -126,66 +126,22 @@ defmodule AuroraUixWeb.Uix.Renderer do
     view MyApp.Accounts, MyApp.Accounts.User, :list, [source: "users", name: "User", title: "Users"]
   end
   """
-  defmacro view(context, module, type, opts) do
+  defmacro view(context, module, types, opts) do
     context = Macro.expand(context, __CALLER__)
     module = Macro.expand(module, __CALLER__)
+    types = if is_list(types), do: types, else: [types]
 
     Code.ensure_compiled(context)
     Code.ensure_compiled(module)
 
-    parsed_opts = parse_opts(module, type, opts)
-
-    key = String.to_existing_atom(parsed_opts.source)
-    list_function = String.to_existing_atom("list_#{parsed_opts.source}")
-    get_function = String.to_existing_atom("get_#{parsed_opts.module}!")
-    delete_function = String.to_existing_atom("delete_#{parsed_opts.module}")
+    generated_code =
+      for type <- types do
+        parsed_opts = parse_opts(module, type, opts)
+        Template.uix_template().generate_module(context, module, type, opts, parsed_opts)
+      end
 
     quote do
-      @impl true
-      def render(assigns) do
-        var!(assigns) = Map.merge(%{}, assigns)
-        define(unquote(module), unquote(type), unquote(opts))
-      end
-
-      @impl true
-      def mount(_params, _session, socket) do
-        {:ok, stream(socket, unquote(key), apply(unquote(context), unquote(list_function), []))}
-      end
-
-      @impl true
-      def handle_params(params, _url, socket) do
-        {:noreply, apply_action(socket, socket.assigns.live_action, params)}
-      end
-
-      @impl true
-      def handle_event("delete", %{"id" => id}, socket) do
-        instance = apply(unquote(context), unquote(get_function), [id])
-
-        {:ok, _} = apply(unquote(module), unquote(delete_function), [instance])
-
-        {:noreply, stream_delete(socket, unquote(key), instance)}
-      end
-
-      ## PRIVATE
-
-      @spec apply_action(Phoenix.LiveView.Socket.t(), atom, map) :: Phoenix.LiveView.t()
-      defp apply_action(socket, :edit, %{"id" => id}) do
-        socket
-        |> assign(:page_title, "Edit #{unquote(parsed_opts.name)}")
-        |> assign(:account, apply(unquote(context), unquote(get_function), [id]))
-      end
-
-      defp apply_action(socket, :new, _params) do
-        socket
-        |> assign(:page_title, "New #{unquote(parsed_opts.name)}")
-        |> assign(:account, %unquote(module){})
-      end
-
-      defp apply_action(socket, :index, _params) do
-        socket
-        |> assign(:page_title, "Listing #{unquote(parsed_opts.title)}")
-        |> assign(:account, nil)
-      end
+      (unquote_splicing(generated_code))
     end
   end
 
