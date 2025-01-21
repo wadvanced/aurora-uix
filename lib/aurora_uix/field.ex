@@ -3,13 +3,19 @@ defmodule AuroraUix.Field do
   A module representing a configurable field in the AuroraUix system.
 
   This module defines a struct to represent field properties for UI components, such as:
-  - `name`: The field's identifier as an atom.
-  - `html_type`: The HTML type of the field (e.g., `:text`, `:number`, `:date`).
-  - `renderer`: A custom rendering function for the field.
-  - `label`: A display label for the field.
-  - `placeholder`: Placeholder text for input fields.
-  - `length`: Maximum allowed length of input (used for validations).
-  - `precision` and `scale`: Decimal precision and scale for numeric fields.
+    - `field` (`atom`) - The field reference in the schema.
+    - `name` (`binary`) - The field's name as a binary.
+    - `html_type` (`atom`) - The HTML type of the field (e.g., `:text`, `:number`, `:date`).
+    - `renderer` (`function`) - A custom rendering function for the field.
+    - `label` (`binary`) - A display label for the field.
+    - `placeholder` (`binary`) - Placeholder text for input fields.
+    - `length` (`non_neg_integer`) - Maximum allowed length of input (used for validations).
+    - `precision` (`non_neg_integer`) - Number of digits for numeric fields.
+    - `scale` (`non_neg_integer`) - Number of digits to the right of the decimal separator, for numeric fields.
+    - `hidden` (`boolean`) - If true the field should be included, but not visible.
+      However, it is up to the implementation whether to include the field in the generated artifact or not.
+    - `readonly` (`boolean`) - If true the field should not accept changes.
+    - `required` (`boolean`) - Indicates that the field should not be empty or unused.
 
   """
   defstruct [
@@ -21,7 +27,10 @@ defmodule AuroraUix.Field do
     placeholder: "",
     length: 0,
     precision: 0,
-    scale: 0
+    scale: 0,
+    hidden: false,
+    readonly: false,
+    required: false
   ]
 
   @type t() :: %__MODULE__{
@@ -33,7 +42,10 @@ defmodule AuroraUix.Field do
           placeholder: binary,
           length: non_neg_integer,
           precision: non_neg_integer,
-          scale: non_neg_integer
+          scale: non_neg_integer,
+          hidden: boolean,
+          readonly: boolean,
+          required: boolean
         }
 
   @doc """
@@ -51,25 +63,32 @@ defmodule AuroraUix.Field do
         field: :age,
         html_type: :float,
         renderer: nil,
-        name: "age",
+        name: :age,
         label: "",
         placeholder: "",
         length: 0,
         precision: 10,
-        scale: 2
+        scale: 2,
+        hidden: false,
+        readonly: false,
+        required: false
       }
+
 
       iex> AuroraUix.Field.new([field: :username, html_type: :text])
       %AuroraUix.Field{
         field: :username,
         html_type: :text,
         renderer: nil,
-        name: "username",
+        name: :username,
         label: "",
         placeholder: "",
         length: 0,
         precision: 0,
-        scale: 0
+        scale: 0,
+        hidden: false,
+        readonly: false,
+        required: false
       }
   """
   @spec new(map | keyword) :: __MODULE__.t()
@@ -87,17 +106,35 @@ defmodule AuroraUix.Field do
     ## Examples
 
         iex> field = AuroraUix.Field.new(%{field: :age})
+        %AuroraUix.Field{
+          field: :age,
+          html_type: nil,
+          renderer: nil,
+          name: :age,
+          label: "",
+          placeholder: "",
+          length: 0,
+          precision: 0,
+          scale: 0,
+          hidden: false,
+          readonly: false,
+          required: false
+        }
+
         iex> AuroraUix.Field.change(field, %{html_type: :number, precision: 3})
         %AuroraUix.Field{
           field: :age,
           html_type: :number,
           renderer: nil,
-          name: "age",
+          name: :age,
           label: "",
           placeholder: "",
           length: 0,
           precision: 3,
-          scale: 0
+          scale: 0,
+          hidden: false,
+          readonly: false,
+          required: false
         }
   """
   @spec change(__MODULE__.t(), map | keyword) :: __MODULE__.t()
